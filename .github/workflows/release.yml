@@ -20,25 +20,53 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build plugin
-        run: npm run build
+      - name: Build and package plugin
+        run: npm run release
 
-      - name: Create release package
+      - name: Extract version from tag
+        id: version
         run: |
-          mkdir workspace-filegroups
-          cp release/* workspace-filegroups/
-          tar -czf workspace-filegroups-${{ github.ref_name }}.tar.gz workspace-filegroups/
-          zip -r workspace-filegroups-${{ github.ref_name }}.zip workspace-filegroups/
+          VERSION=${{ github.ref_name }}
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Verify release files
+        run: |
+          BUILD_DIR="dist/workspace-filegroups-${{ steps.version.outputs.version }}"
+          TAR_FILE="dist/workspace-filegroups-${{ steps.version.outputs.version }}.tar.gz"
+          ZIP_FILE="dist/workspace-filegroups-${{ steps.version.outputs.version }}.zip"
+          
+          echo "Checking for release files..."
+          ls -la dist/
+          
+          if [ ! -d "$BUILD_DIR" ]; then
+            echo "❌ Build directory $BUILD_DIR not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "$TAR_FILE" ]; then
+            echo "❌ Archive $TAR_FILE not found!"
+            exit 1
+          fi
+          
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "❌ Archive $ZIP_FILE not found!"
+            exit 1
+          fi
+          
+          echo "✅ All release files found!"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            workspace-filegroups-${{ github.ref_name }}.tar.gz
-            workspace-filegroups-${{ github.ref_name }}.zip
-            release/main.js
-            release/manifest.json
-            release/styles.css
+            dist/workspace-filegroups-${{ steps.version.outputs.version }}.tar.gz
+            dist/workspace-filegroups-${{ steps.version.outputs.version }}.zip
+            dist/workspace-filegroups-${{ steps.version.outputs.version }}/main.js
+            dist/workspace-filegroups-${{ steps.version.outputs.version }}/manifest.json
+            dist/workspace-filegroups-${{ steps.version.outputs.version }}/styles.css
           draft: false
           prerelease: false
           generate_release_notes: true
