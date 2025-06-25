@@ -2,23 +2,24 @@
  * {
  *  workspaces: {
   *  "Workspace A": {
-  *    folders: []
+  *    visibleFolders: []  // Folders to SHOW in this workspace
   *  },
   *  "Workspace B": {
-  *    folders: []
+  *    visibleFolders: []
   *   }
  *  }
  * }
  */
 
-export interface IWorkspaceFolderHiderSettings {
+export interface IWorkspaceFileGroupsSettings {
   active: string,
 	workspaces: {
-    [name: string]: IWorkspaceFolderHiderSetting
+    [name: string]: IWorkspaceFileGroupsSetting
   };
 }
 
-export interface IWorkspaceFolderHiderSetting {
-	folders: Array<String>
+export interface IWorkspaceFileGroupsSetting {
+	visibleFolders: Array<string>  // Changed from 'folders' to 'visibleFolders' for clarity
+	folders?: Array<string>       // Keep for backward compatibility during migration
 }
 

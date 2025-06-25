@@ -1,12 +1,12 @@
 {
-	"id": "workspace-folder-hider",
-	"name": "Workspace Folder Hider",
+	"id": "workspace-filegroups",
+	"name": "Workspace File Groups",
 	"version": "1.0.0",
-	"minAppVersion": "1.4.0",
-	"description": "Hides folders and files in a particular workspace.",
-	"author": "JEBoothjr",
-	"authorUrl": "https://github.com/JEBoothjr",
-	"fundingUrl": "https://ko-fi.com/jeboothjr",
-  "helpUrl": "https://github.com/JEBoothjr/workspace-folder-hider",
+	"minAppVersion": "1.6.0",
+	"description": "Organize your vault by showing only specific folders in each workspace. Create focused work environments by defining folder groups for different contexts.",
+	"author": "DevelopmentCats",
+	"authorUrl": "https://github.com/DevelopmentCats",
+	"fundingUrl": "https://ko-fi.com/developmentcats",
+	"helpUrl": "https://github.com/DevelopmentCats/workspace-filegroups",
 	"isDesktopOnly": false
 }

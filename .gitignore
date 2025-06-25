@@ -1,22 +1,40 @@
-# vscode
-.vscode 
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Build artifacts in root
+/main.js
+*.tar.gz
+*.zip
+
+# Build artifacts (generated files)
+dist/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files  
+.vscode/
+.idea/
 
 # Intellij
 *.iml
-.idea
-
-# npm
-node_modules
-
-# Don't include the compiled main.js file in the repo.
-# They should be uploaded to GitHub releases instead.
-main.js
 
 # Exclude sourcemaps
 *.map
 
 # obsidian
 data.json
-
-# Exclude macOS Finder (System Explorer) View States
-.DS_Store

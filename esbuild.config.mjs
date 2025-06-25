@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import { copyFileSync, mkdirSync, readFileSync, rmSync } from "fs";
 
 const banner =
 `/*
@@ -10,6 +11,24 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === "production");
+const isWatch = !prod && !process.argv.includes("--no-watch");
+
+// Get version from package.json
+const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+const version = packageJson.version;
+
+// Always use version number for output directory
+const outputDir = `dist/workspace-filegroups-${version}`;
+
+// Clean dist folder to prevent old version accumulation
+rmSync("dist", { recursive: true, force: true });
+mkdirSync(outputDir, { recursive: true });
+
+// Copy static files function
+function copyStaticFiles() {
+	copyFileSync("manifest.json", `${outputDir}/manifest.json`);
+	copyFileSync("styles.css", `${outputDir}/styles.css`);
+}
 
 const context = await esbuild.context({
 	banner: {
@@ -37,12 +56,34 @@ const context = await esbuild.context({
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
-	outfile: "main.js",
+	outfile: `${outputDir}/main.js`,
 });
 
-if (prod) {
-	await context.rebuild();
-	process.exit(0);
-} else {
+if (isWatch) {
+	// Development mode with watching
+	console.log(`🔍 Starting development build with file watching...`);
+	console.log(`📁 Output: ${outputDir}/`);
+	copyStaticFiles();
 	await context.watch();
+	console.log("👀 Watching for changes... Press Ctrl+C to stop.");
+} else {
+	// Single build
+	await context.rebuild();
+	copyStaticFiles();
+	
+	if (prod) {
+		console.log(`\n📦 Production build complete: ${outputDir}/`);
+		console.log("  ✓ main.js");
+		console.log("  ✓ manifest.json"); 
+		console.log("  ✓ styles.css");
+		console.log("\n🚀 Ready for packaging!");
+	} else {
+		console.log(`\n📦 Development build complete: ${outputDir}/`);
+		console.log("  ✓ main.js");
+		console.log("  ✓ manifest.json"); 
+		console.log("  ✓ styles.css");
+		console.log(`\n💡 Install by copying ${outputDir}/ to your vault's .obsidian/plugins/ directory`);
+	}
+	
+	process.exit(0);
 }

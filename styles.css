@@ -2,3 +2,252 @@
   display: none;
   /* opacity: .25; */
 }
+
+/* Main hiding functionality with smooth transitions */
+.workspace-filegroups-hidden {
+  opacity: 0 !important;
+  transform: scale(0.95) !important;
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Smooth transitions for folder visibility */
+.nav-folder {
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out, max-height 0.15s ease-out;
+}
+
+/* Hide file navigator during workspace transitions to prevent folder flash */
+.workspace-filegroups-transitioning .nav-files-container {
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+  pointer-events: none;
+}
+
+/* Ensure smooth transition back to visible */
+.nav-files-container {
+  transition: opacity 0.1s ease-in;
+}
+
+/* Status bar workspace switcher - Obsidian native styling */
+.workspace-filegroups-status {
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.workspace-filegroups-status:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.workspace-filegroups-status:active {
+  background-color: var(--background-modifier-active-hover);
+}
+
+.workspace-filegroups-status .workspace-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.8;
+}
+
+.workspace-filegroups-status .workspace-icon svg {
+  color: var(--text-muted);
+}
+
+.workspace-filegroups-status:hover .workspace-icon svg {
+  color: var(--text-normal);
+}
+
+.workspace-filegroups-status .workspace-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Workspace settings sections */
+.workspace-filegroups-workspace-section {
+  margin: 1.5em 0;
+  padding: 1em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+}
+
+.workspace-filegroups-workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1em;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.workspace-filegroups-workspace-header h3 {
+  margin: 0;
+  color: var(--text-accent);
+}
+
+/* Workspace header icon styling */
+.workspace-header-icon {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.workspace-header-icon svg {
+  color: var(--text-accent);
+}
+
+.workspace-filegroups-folder-count {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Action buttons */
+.workspace-filegroups-actions {
+  display: flex;
+  gap: 0.5em;
+  margin-bottom: 1em;
+}
+
+.workspace-filegroups-actions button {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s ease;
+}
+
+.workspace-filegroups-actions button:hover {
+  background: var(--background-modifier-hover);
+}
+
+.workspace-filegroups-actions button.mod-cta {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.workspace-filegroups-actions button.mod-cta:hover {
+  background: var(--interactive-accent-hover);
+}
+
+/* Folder list */
+.workspace-filegroups-folder-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+}
+
+.workspace-filegroups-folder-item {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.workspace-filegroups-folder-item:last-child {
+  border-bottom: none;
+}
+
+.workspace-filegroups-folder-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.workspace-filegroups-folder-item label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin: 0;
+  font-size: 0.9em;
+  user-select: none;
+  width: 100%;
+}
+
+.workspace-filegroups-folder-item input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Hierarchical folder styling */
+.workspace-filegroups-folder-item[style*="padding-left"] {
+  position: relative;
+}
+
+.workspace-filegroups-folder-item[style*="padding-left"]:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--background-modifier-border);
+  margin-left: calc(var(--depth, 0) * 20px + 10px);
+}
+
+/* Subfolder count styling */
+.workspace-filegroups-subfolder-count {
+  color: var(--text-muted);
+  font-size: 0.8em;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* Settings panel styling */
+.workspace-filegroups-info {
+  margin-top: 2em;
+  padding: 1em;
+  background: var(--background-secondary);
+  border-radius: 6px;
+}
+
+.workspace-filegroups-info h3 {
+  margin-top: 0;
+  color: var(--text-accent);
+}
+
+.workspace-filegroups-info ul {
+  margin-bottom: 0;
+}
+
+.workspace-filegroups-info li {
+  margin-bottom: 0.5em;
+}
+
+/* Save button styling */
+.setting-item .setting-item-control button.mod-cta {
+  background: var(--interactive-success);
+  border-color: var(--interactive-success);
+}
+
+.setting-item .setting-item-control button.mod-cta:hover {
+  background: var(--interactive-success-hover);
+}
+
+/* Textarea styling in settings (legacy) */
+.setting-item textarea {
+  min-height: 100px;
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+}

@@ -1,54 +1,51 @@
 import { App, FileSystemAdapter } from 'obsidian';
-import { IWorkspaceFolderHiderSetting } from './interfaces';
 
 /*
 Creates a "lite" copy of the internal workspaces to align with the plugin settings.
 This is to ensure that we are always working with the correct workspaces.
 */
-const getInternalWorkspaces = async (app:App): any => {
-  let workspacesFile = await FileSystemAdapter.readLocalFile(`${app.vault.adapter.basePath}/.obsidian/workspaces.json`);
-  let workspaces = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(workspacesFile)));
-  
-  let workspaceNames = Object.keys(workspaces.workspaces);
-  let result:any = { workspaces: {} };
+const getInternalWorkspaces = async (app: App): Promise<any> => {
+  try {
+    const adapter = app.vault.adapter;
+    if (!(adapter instanceof FileSystemAdapter)) {
+      throw new Error('FileSystemAdapter not available');
+    }
 
-  for(let i=0; i<workspaceNames.length; i++){
-    result.workspaces[workspaceNames[i]] = { folders: [] }; // this structure must match the settings structure
+    const workspacesFile = await FileSystemAdapter.readLocalFile(`${adapter.getBasePath()}/.obsidian/workspaces.json`);
+    const workspaces = JSON.parse(String.fromCharCode.apply(null, Array.from(new Uint8Array(workspacesFile))));
+    
+    const workspaceNames = Object.keys(workspaces.workspaces || {});
+    const result: any = { workspaces: {} };
+
+    for(const name of workspaceNames) {
+      result.workspaces[name] = { visibleFolders: [] }; // Updated to use visibleFolders
+    }
+    result.active = workspaces.active || '';
+    return result;
+  } catch (error) {
+    console.error('Workspace File Groups: Error reading workspaces file:', error);
+    return { workspaces: {}, active: '' };
   }
-  result.active = workspaces.active;
-  return result;
 }
 
-const getInternalActiveWorkspace = async (app:App): string => {
-  let workspacesFile = await FileSystemAdapter.readLocalFile(`${app.vault.adapter.basePath}/.obsidian/workspaces.json`);
-  let workspaces = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(workspacesFile)));
+const getInternalActiveWorkspace = async (app: App): Promise<string> => {
+  try {
+    const adapter = app.vault.adapter;
+    if (!(adapter instanceof FileSystemAdapter)) {
+      return '';
+    }
 
-  return workspaces.active;
-}
+    const workspacesFile = await FileSystemAdapter.readLocalFile(`${adapter.getBasePath()}/.obsidian/workspaces.json`);
+    const workspaces = JSON.parse(String.fromCharCode.apply(null, Array.from(new Uint8Array(workspacesFile))));
 
-// Trims the folder path of any whitespace and removes any leading slashes
-const cleanTreePath = (folder:String): string => {
-  return folder.trim().replace(/^\/+/g, '');
-}
-
-// We need to take the list of folders from the text area and put them into an array.
-const prepareSettingsForSaving = (setting:IWorkspaceFolderHiderSetting, txt): IWorkspaceFolderHiderSetting => {
-  let folders:Array<String> = txt.split('\n').map(f => cleanTreePath(f)).filter((f) => f.length > 0);
-  setting.folders = folders;
-  return setting;
-}
-
-// We need to take the list of folders from the settings array and
-// create a string of them for the text area in the settings.
-const prepareSettingsForRendering = (setting:IWorkspaceFolderHiderSetting): string => {
-  let folders:Array<String> = setting.folders || [];
-  let result:string = folders.map(f => cleanTreePath(f)).filter((f) => f.length > 0).join('\n');
-  return result;
+    return workspaces.active || '';
+  } catch (error) {
+    console.error('Workspace File Groups: Error reading active workspace:', error);
+    return '';
+  }
 }
 
 export {
   getInternalWorkspaces,
-  getInternalActiveWorkspace,
-  prepareSettingsForSaving,
-  prepareSettingsForRendering
+  getInternalActiveWorkspace
 }
