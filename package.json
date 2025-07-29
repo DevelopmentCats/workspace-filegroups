@@ -1,6 +1,6 @@
 {
 	"name": "workspace-filegroups",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "Organize your vault by showing only specific folders in each workspace. Create focused work environments by defining folder groups for different contexts.",
 	"main": "main.js",
 	"scripts": {
