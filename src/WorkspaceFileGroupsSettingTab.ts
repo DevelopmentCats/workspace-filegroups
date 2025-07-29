@@ -1,8 +1,10 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, debounce } from 'obsidian';
 import WorkspaceFileGroupsPlugin from './main';
 
 export class WorkspaceFileGroupsSettingTab extends PluginSettingTab {
 	plugin: WorkspaceFileGroupsPlugin;
+	private searchTerm: string = '';
+	private expandedFolders: Set<string> = new Set();
 
 	constructor(app: App, plugin: WorkspaceFileGroupsPlugin) {
 		super(app, plugin);
@@ -95,7 +97,7 @@ export class WorkspaceFileGroupsSettingTab extends PluginSettingTab {
     titleEl.style.marginLeft = '6px';
     
     // Create counter element that we can update
-    const counterEl = headerEl.createEl('span', { 
+    const counterEl = headerEl.createEl('span', {
       cls: 'workspace-filegroups-folder-count'
     });
     
@@ -105,39 +107,95 @@ export class WorkspaceFileGroupsSettingTab extends PluginSettingTab {
       counterEl.setText(`${selectedCount}/${totalCount} folders visible`);
     };
     updateCounter(); // Initial count
+// Enhanced controls section
+const controlsEl = sectionEl.createDiv('workspace-filegroups-controls');
 
-    // Quick actions
-    const actionsEl = sectionEl.createDiv('workspace-filegroups-actions');
-    
-    // Select all button
-    const selectAllBtn = actionsEl.createEl('button', { 
-      text: 'Select All',
-      cls: 'mod-cta'
-    });
-    selectAllBtn.addEventListener('click', async () => {
-      workspaceSettings.visibleFolders = [...allFolders];
-      await this.plugin.saveSettings();
-      this.display(); // Refresh entire interface
-    });
+// Search input
+const searchContainer = controlsEl.createDiv('workspace-filegroups-search-container');
+const searchInput = searchContainer.createEl('input', {
+  type: 'text',
+  placeholder: 'Search folders...',
+  cls: 'workspace-filegroups-search'
+});
 
-    // Select none button  
-    const selectNoneBtn = actionsEl.createEl('button', { 
-      text: 'Select None'
-    });
-    selectNoneBtn.addEventListener('click', async () => {
-      workspaceSettings.visibleFolders = [];
-      await this.plugin.saveSettings();
-      this.display(); // Refresh entire interface
-    });
+const searchIcon = searchContainer.createSpan({ cls: 'workspace-filegroups-search-icon' });
+searchIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`;
 
-    // Folder list
-    const foldersEl = sectionEl.createDiv('workspace-filegroups-folder-list');
-    
-    if (allFolders.length > 0) {
-      // Group folders by hierarchy for better organization
-      const folderHierarchy = this.buildFolderHierarchy(allFolders);
-      this.renderFolderHierarchy(foldersEl, folderHierarchy, workspaceSettings, allFolders, updateCounter);
+// Quick actions
+const actionsEl = controlsEl.createDiv('workspace-filegroups-actions');
+
+// Create all buttons first
+const selectAllBtn = actionsEl.createEl('button', {
+  text: 'Select All',
+  cls: 'mod-cta'
+});
+
+const selectNoneBtn = actionsEl.createEl('button', {
+  text: 'Select None'
+});
+
+const invertBtn = actionsEl.createEl('button', {
+  text: 'Invert Selection'
+});
+
+const expandBtn = actionsEl.createEl('button', {
+  text: 'Expand All'
+});
+
+// Folder list container
+const foldersEl = sectionEl.createDiv('workspace-filegroups-folder-list');
+
+if (allFolders.length > 0) {
+  // Group folders by hierarchy for better organization
+  const folderHierarchy = this.buildFolderHierarchy(allFolders);
+  this.renderFolderHierarchy(foldersEl, folderHierarchy, workspaceSettings, allFolders, updateCounter);
+  
+  // Setup button event listeners after folderHierarchy is defined
+  selectAllBtn.addEventListener('click', async () => {
+    workspaceSettings.visibleFolders = [...allFolders];
+    await this.plugin.saveSettings();
+    updateCounter();
+    this.refreshFolderDisplay(foldersEl, folderHierarchy, workspaceSettings, allFolders, updateCounter);
+  });
+
+  selectNoneBtn.addEventListener('click', async () => {
+    workspaceSettings.visibleFolders = [];
+    await this.plugin.saveSettings();
+    updateCounter();
+    this.refreshFolderDisplay(foldersEl, folderHierarchy, workspaceSettings, allFolders, updateCounter);
+  });
+
+  invertBtn.addEventListener('click', async () => {
+    const currentVisible = new Set(workspaceSettings.visibleFolders);
+    workspaceSettings.visibleFolders = allFolders.filter(folder => !currentVisible.has(folder));
+    await this.plugin.saveSettings();
+    updateCounter();
+    this.refreshFolderDisplay(foldersEl, folderHierarchy, workspaceSettings, allFolders, updateCounter);
+  });
+
+  expandBtn.addEventListener('click', () => {
+    const isExpanded = expandBtn.textContent === 'Collapse All';
+    if (isExpanded) {
+      this.expandedFolders.clear();
+      expandBtn.setText('Expand All');
+    } else {
+      allFolders.forEach(folder => this.expandedFolders.add(folder));
+      expandBtn.setText('Collapse All');
     }
+    this.refreshFolderDisplay(foldersEl, folderHierarchy, workspaceSettings, allFolders, updateCounter);
+  });
+  
+  // Setup search functionality with debounce
+  const debouncedSearch = debounce((searchTerm: string) => {
+    this.searchTerm = searchTerm.toLowerCase();
+    this.refreshFolderDisplay(foldersEl, folderHierarchy, workspaceSettings, allFolders, updateCounter);
+  }, 300);
+  
+  searchInput.addEventListener('input', (e: any) => {
+    const target = e.target as HTMLInputElement;
+    debouncedSearch(target.value);
+  });
+}
   }
 
   private buildFolderHierarchy(allFolders: string[]): {[key: string]: string[]} {
@@ -176,19 +234,58 @@ export class WorkspaceFileGroupsSettingTab extends PluginSettingTab {
   }
 
   private renderFolder(
-    container: HTMLElement, 
-    folderPath: string, 
-    hierarchy: {[key: string]: string[]}, 
-    workspaceSettings: any, 
-    allFolders: string[], 
+    container: HTMLElement,
+    folderPath: string,
+    hierarchy: {[key: string]: string[]},
+    workspaceSettings: any,
+    allFolders: string[],
     updateCounter: () => void,
     depth: number
   ) {
     const isVisible = workspaceSettings.visibleFolders.includes(folderPath);
     const hasChildren = hierarchy[folderPath] && hierarchy[folderPath].length > 0;
+    const folderName = folderPath.split('/').pop() || folderPath;
+    
+    // Search filtering
+    const matchesSearch = this.searchTerm === '' ||
+      folderName.toLowerCase().includes(this.searchTerm) ||
+      folderPath.toLowerCase().includes(this.searchTerm);
     
     const folderEl = container.createDiv('workspace-filegroups-folder-item');
     folderEl.style.paddingLeft = `${12 + (depth * 20)}px`; // Indent based on depth
+    
+    // Hide if doesn't match search
+    if (!matchesSearch) {
+      folderEl.style.display = 'none';
+    }
+    
+    // Add expand/collapse indicator if has children
+    if (hasChildren) {
+      const expandIndicator = folderEl.createSpan({
+        cls: 'folder-expand-indicator'
+      });
+      expandIndicator.innerHTML = '▶';
+      
+      const isExpanded = this.expandedFolders.has(folderPath);
+      if (isExpanded) {
+        folderEl.addClass('expanded');
+      }
+      
+      expandIndicator.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.expandedFolders.has(folderPath)) {
+          this.expandedFolders.delete(folderPath);
+          folderEl.removeClass('expanded');
+        } else {
+          this.expandedFolders.add(folderPath);
+          folderEl.addClass('expanded');
+        }
+        this.refreshFolderDisplay(container.parentElement as HTMLElement, hierarchy, workspaceSettings, allFolders, updateCounter);
+      });
+    } else {
+      // Add spacing for alignment when no expand indicator
+      folderEl.createSpan({ text: '   ' });
+    }
     
     const checkbox = folderEl.createEl('input', { type: 'checkbox' });
     checkbox.checked = isVisible;
@@ -220,33 +317,39 @@ export class WorkspaceFileGroupsSettingTab extends PluginSettingTab {
       // Auto-save changes immediately
       await this.plugin.saveSettings();
       updateCounter();
-      this.refreshFolderDisplay(container, hierarchy, workspaceSettings, allFolders, updateCounter);
     });
 
     const label = folderEl.createEl('label');
     label.appendChild(checkbox);
     
-    // Add folder icon and name
-    const folderName = folderPath.split('/').pop() || folderPath;
+    // Add folder icon and name with search highlighting
     const icon = hasChildren ? '📁' : '📂';
-    label.appendText(` ${icon} ${folderName}`);
+    const displayName = this.highlightSearchTerm(folderName, this.searchTerm);
+    label.innerHTML += ` ${icon} ${displayName}`;
     
     // Add subfolder count if it has children
     if (hasChildren) {
       const childCount = this.countAllSubfolders(folderPath, hierarchy);
-      label.createEl('span', { 
+      label.createEl('span', {
         text: ` (${childCount} subfolders)`,
         cls: 'workspace-filegroups-subfolder-count'
       });
     }
 
-    // Render subfolders
-    if (hasChildren) {
+    // Render subfolders if expanded or searching
+    if (hasChildren && (this.expandedFolders.has(folderPath) || this.searchTerm !== '')) {
       const subfolders = hierarchy[folderPath] || [];
       subfolders.sort().forEach(subfolder => {
         this.renderFolder(container, subfolder, hierarchy, workspaceSettings, allFolders, updateCounter, depth + 1);
       });
     }
+  }
+
+  private highlightSearchTerm(text: string, searchTerm: string): string {
+    if (!searchTerm) return text;
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<span class="search-highlight">$1</span>');
   }
 
   private selectAllSubfolders(parentPath: string, hierarchy: {[key: string]: string[]}, workspaceSettings: any) {

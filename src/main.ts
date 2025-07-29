@@ -416,13 +416,21 @@ export default class WorkspaceFileGroupsPlugin extends Plugin {
   }
 
   // Since we're tracking the workspaces.json file we need to sync it with our data.json on startup
-	async syncSettings() {
+ async syncSettings() {
     try {
       const internalWorkspaces = await getInternalWorkspaces(this.app);
       let pluginSettings = await this.loadData(); // load the data.json file
 
       // If we have a data.json file, use it. If not create one based on the default settings.
       pluginSettings = pluginSettings || Object.assign({}, DEFAULT_SETTINGS);
+      
+      // Preserve the current active workspace if it exists
+      const currentActive = await getInternalActiveWorkspace(this.app);
+      if (currentActive && pluginSettings.active !== currentActive) {
+        console.log(`Workspace File Groups: Updating active workspace from "${pluginSettings.active}" to "${currentActive}"`);
+        pluginSettings.active = currentActive;
+      }
+      
       this.settings = this.repairSettings(internalWorkspaces, pluginSettings);
       await this.saveData(this.settings);
     } catch (error) {
@@ -430,7 +438,7 @@ export default class WorkspaceFileGroupsPlugin extends Plugin {
       this.settings = DEFAULT_SETTINGS;
       new Notice('Workspace File Groups: Could not sync with workspace settings. Using defaults.');
     }
-	}
+ }
 
   // Makes sure that the plugin settings workspaces match what Obsidian is using internally
   repairSettings(internalSettings: any, pluginSettings: IWorkspaceFileGroupsSettings): IWorkspaceFileGroupsSettings {
@@ -438,7 +446,10 @@ export default class WorkspaceFileGroupsPlugin extends Plugin {
     const internalWorkspaceNames = Object.keys(internalSettings.workspaces || {});
     for(const name of internalWorkspaceNames) {
       if(!pluginSettings.workspaces[name]){
+        // Only create new workspace entry if it doesn't exist
+        // This preserves existing folder selections
         pluginSettings.workspaces[name] = { visibleFolders: [] };
+        console.log(`Workspace File Groups: Created new workspace entry for "${name}"`);
       }
     }
 
@@ -454,14 +465,44 @@ export default class WorkspaceFileGroupsPlugin extends Plugin {
   }
 
 	async saveSettings() {
-    try {
-      await this.saveData(this.settings);
-      await this.renderFolders();
-      this.updateStatusBar();
-    } catch (error) {
-      console.error('Workspace File Groups: Error saving settings:', error);
-      new Notice('Workspace File Groups: Failed to save settings');
-    }
+	   try {
+	     // Create a backup of current settings before saving
+	     const backupKey = `workspace-filegroups-backup-${Date.now()}`;
+	     const currentData = await this.loadData();
+	     if (currentData && Object.keys(currentData.workspaces || {}).length > 0) {
+	       localStorage.setItem(backupKey, JSON.stringify(currentData));
+	       
+	       // Keep only the latest 3 backups
+	       const backupKeys = Object.keys(localStorage).filter(key => key.startsWith('workspace-filegroups-backup-'));
+	       if (backupKeys.length > 3) {
+	         backupKeys.sort().slice(0, backupKeys.length - 3).forEach(key => {
+	           localStorage.removeItem(key);
+	         });
+	       }
+	     }
+	     
+	     await this.saveData(this.settings);
+	     await this.renderFolders();
+	     this.updateStatusBar();
+	     
+	     console.log('Workspace File Groups: Settings saved successfully');
+	   } catch (error) {
+	     console.error('Workspace File Groups: Error saving settings:', error);
+	     new Notice('Workspace File Groups: Failed to save settings');
+	     
+	     // Try to restore from backup if save failed
+	     try {
+	       const backupKeys = Object.keys(localStorage).filter(key => key.startsWith('workspace-filegroups-backup-'));
+	       if (backupKeys.length > 0) {
+	         const latestBackup = backupKeys.sort().pop();
+	         const backupData = JSON.parse(localStorage.getItem(latestBackup!) || '{}');
+	         this.settings = backupData;
+	         console.log('Workspace File Groups: Restored from backup');
+	       }
+	     } catch (restoreError) {
+	       console.error('Workspace File Groups: Failed to restore from backup:', restoreError);
+	     }
+	   }
 	}
 
   onunload() {
